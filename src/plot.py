@@ -3,7 +3,7 @@
 """
 Created on Saturdau Sep 16 16:58:58 2017
 
-@author: Hans - Clément - Alie
+@author: Hans - Clément - Ali
 """
 
 import pandas as pd
