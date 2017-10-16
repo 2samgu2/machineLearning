@@ -32,23 +32,83 @@ def plot(genes) :
     plt.xlabel('genes')
     plt.show()
 
+def geneHightCorrelation(G,Y) :
+	ncol = G.shape[1]
+	rho = np.zeros(ncol)
+	for k in range (ncol) :
+		#print (len(G[1:,k]))
+		#print (len(Y))
+		#print (G[1:,k], Y)
 
-def geneHightCorrelation(gene, ncol, labels) :
-    #print (len(ncol))
-    L=len (labels)
-    #rho = np.zeros(ncol)
-    #print (rho)
-    for k in range(ncol):
+		c = np.corrcoef(G[1:,k].astype(float), Y.astype(float))
+		rho[k] = c [0,1]
+	#print (rho)
+	w = np.nonzero(abs(rho)>.1)[0] # On sélecionne uniquement les genes qui ont un
+							# coefficient de corrélation > 0.1
+	#print (len(w))
+	#print (w)
+	return (rho, w)
 
-        c = np.corrcoef(np.reshape(genes[k],[L,1]),np.reshape(labels,[L,1]))
-        print (c)
-        break
+def knn (G,Y) :
+	w = geneHightCorrelation(G,Y)[1]
+	n = len (X[0]) # Nbre d'échantillon
+	Xw = X[w] # Recupère les valeurs d'expression des gènes avec un coeff > 0.1
+	#print (n)
+	Xw = Xw[1:]
 
-        #print (c)
-        #rho[k] = c[0, 1]
-        #print (rho[k])
-    #w = np.nonzero(abs(rho)>0.5)[0]
-    #print (len(w))
+
+	b=100
+	n_neighbors = np.arange(1,7)
+	ErrClassif = np.zeros([len(n_neighbors),b])
+	#print (ErrClassif)
+
+
+	for i in range (b) :
+		itrain, itest = train_test_split(range(0, n-1), test_size = 0.25)
+		Xtrain = Xw.iloc[itrain]
+		ytrain = Y[np.asarray(itrain)] # because itrain is a list
+	                          # and y is indexed from 6 to ...
+		ytest = Y[np.asarray(itest)] # because itest is a list
+
+		for j in n_neighbors:
+			clf = neighbors.KNeighborsClassifier(j)
+			clf.fit(Xtrain, ytrain)
+			yhat = clf.predict(Xw.iloc[itest])
+			#print (yhat)
+
+
+			ErrClassif[j-1,99] = np.mean(ytest!=yhat)
+			#print (ErrClassif)
+	return (ErrClassif, n_neighbors)
+
+
+
+"""
+# Best result for 1 neighbor
+ibest = 1
+ntest = 10 # 10 because len(itest) = 10
+y_score = np.zeros([ntest,B]) # 10 because len(itest) = 10
+y_test = np.zeros([ntest,B]) # 10 because len(itest) = 10
+
+for b in range(B):
+    itrain,itest=train_test_split(range(0,n-1),test_size=0.25)
+    Xtrain = Xw.iloc[itrain]
+    ytrain = Y[np.asarray(itrain)] # because itrain is a list
+                          # and y is indexed from 6 to ...
+    ytest = Y[np.asarray(itest)] # because itest is a list
+    y_test[:,b] = ytest
+    clf = neighbors.KNeighborsClassifier(ibest)
+    clf.fit(Xtrain, ytrain)
+    y_score[:,b] = clf.predict_proba(Xw.iloc[itest])[:,1]
+
+
+
+ROC(y_test,y_score,"kNN, 1 neighbor")
+
+"""
+
+
+
 
 
 #----------------Menu Principale----------------------------------
@@ -62,21 +122,19 @@ gene = pd.read_table("../data/xtrain.txt", header=None)
 labels = pd.read_table("../data/ytrain.txt", header=None)
 ncol = gene.shape[1]
 
-#print (ncol)
-geneT = gene[gene.columns[np.arange(1, ncol)]]
-#print(geneT)
-genes = geneT.T
-#print (genes)
+X = gene.T
 
-ncol = genes.shape[1]
-nrow = genes.shape[0]
-#print (ncol) # Nombre d'échantillon
-#print(nrow) # Nombre de genes
+Y = np.array(labels).reshape(184)
+G = np.array(X)
 
-#print (type(labels))
-#print (ncol)
-#print (len (labels))
-#plot(genes)
-#knn(genes)
+geneHightCorrelation(G,Y)
 
-geneHightCorrelation(genes, ncol, labels)
+ErrClassif , n_neighbors = knn (G,Y)
+
+#plt.boxplot(ErrClassif.T,labels=n_neighbors)
+plt.plot(ErrClassif.T)
+plt.ylim(0,1)
+plt.ylabel('Mean classification error')
+plt.xlabel('nb of neighbors')
+#plt.plot(rho)
+plt.show()
